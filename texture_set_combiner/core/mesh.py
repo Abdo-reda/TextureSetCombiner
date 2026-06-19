@@ -1,28 +1,35 @@
 import pyassimp
+
 from texture_set_combiner.core.state import AppState
 
 
-def load_mesh(state: AppState, file_path: str) -> None:
-    """Load a mesh file and update application state. Implementation TBD."""
-    get_materials(state, file_path)
-    print("---- is this working?", file_path)
-    pass
+def _material_name(material, index: int) -> str:
+    props = material.properties
+    try:
+        name = str(props["name"]).strip()
+        if name:
+            return name
+    except (KeyError, TypeError):
+        pass
+    return f"Material_{index}"
 
 
 def get_materials(state: AppState, model_path: str) -> list[str]:
-    """Return detected materials / texture sets for the loaded mesh."""
-    with pyassimp.load(model_path) as scene:
-        for i, material in enumerate(scene.materials):
-            props = material.properties
-            name = props.get("name", f"Material_{i}")
-            print(f"\nMaterial {i}: {name}")
- 
-            for key, value in props.items():
-                # texture file paths usually show up under keys like
-                # 'file' / 'file.diffuse' / 'file.normals' depending on the build
-                if "file" in key.lower():
-                    print(f"  Texture ({key}): {value}")
-                else:
-                    print(f"  {key}: {value}")
+    """Read material names from a mesh file and store them on state."""
+    materials: list[str] = []
 
-    return state.materials
+    with pyassimp.load(model_path) as scene:
+        for index, material in enumerate(scene.materials):
+            name = _material_name(material, index)
+            if name not in materials:
+                materials.append(name)
+
+    state.materials = materials
+    return materials
+
+
+def load_mesh(state: AppState, file_path: str) -> list[str]:
+    """Load a mesh file and return detected material names."""
+    state.mesh_file_path = file_path
+    state.selected_material = ""
+    return get_materials(state, file_path)

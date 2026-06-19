@@ -2,27 +2,36 @@ import dearpygui.dearpygui as dpg
 
 from texture_set_combiner.core import mesh as mesh_core
 from texture_set_combiner.core.state import AppState
+from texture_set_combiner.ui.native_dialog import pick_mesh_file
 
 TAG_FILE_PATH = "mesh_import_file_path"
 TAG_MATERIAL_LIST = "mesh_import_material_list"
-TAG_FILE_DIALOG = "mesh_import_file_dialog"
 TAG_UV_PREVIEW = "mesh_import_uv_preview"
+TAG_UV_PREVIEW_HINT = "mesh_import_uv_preview_hint"
 
 
 def build_mesh_import_tab(state: AppState) -> None:
     """Build the Mesh Import tab wireframe."""
 
     def on_browse_clicked() -> None:
-        dpg.show_item(TAG_FILE_DIALOG)
+        file_path = pick_mesh_file()
+        if not file_path:
+            return
 
-    def on_file_selected(sender, app_data) -> None:
-        file_path = app_data["file_path_name"]
+        materials = mesh_core.load_mesh(state, file_path)
         dpg.set_value(TAG_FILE_PATH, file_path)
-        mesh_core.load_mesh(state, file_path)
+        dpg.configure_item(TAG_MATERIAL_LIST, items=materials)
+        dpg.set_value(TAG_UV_PREVIEW_HINT, "Select a material to preview UVs")
 
     def on_material_selected(sender, app_data) -> None:
-        state.selected_material = app_data
-        # UV preview update will be wired here later.
+        state.selected_material = app_data or ""
+        if state.selected_material:
+            dpg.set_value(
+                TAG_UV_PREVIEW_HINT,
+                f"Selected: {state.selected_material}",
+            )
+        else:
+            dpg.set_value(TAG_UV_PREVIEW_HINT, "Select a material to preview UVs")
 
     with dpg.tab(label="Mesh Import"):
         with dpg.group(horizontal=True):
@@ -57,19 +66,6 @@ def build_mesh_import_tab(state: AppState) -> None:
                 with dpg.child_window(width=-1, height=-1, border=True):
                     dpg.add_text(
                         "UV layout preview will appear here",
+                        tag=TAG_UV_PREVIEW_HINT,
                         color=(140, 140, 140),
                     )
-
-    with dpg.file_dialog(
-        tag=TAG_FILE_DIALOG,
-        directory_selector=False,
-        show=False,
-        callback=on_file_selected,
-        width=700,
-        height=400,
-        default_path=".",
-    ):
-        dpg.add_file_extension(
-            "Mesh files (*.obj, *.fbx){.obj,.fbx}",
-            color=(100, 200, 100),
-        )

@@ -2,10 +2,10 @@ import dearpygui.dearpygui as dpg
 
 from texture_set_combiner.core import mesh as mesh_core
 from texture_set_combiner.core.state import AppState
+from texture_set_combiner.ui.native_dialog import pick_mesh_file
 
 TAG_FILE_PATH = "mesh_import_file_path"
 TAG_MATERIAL_LIST = "mesh_import_material_list"
-TAG_FILE_DIALOG = "mesh_import_file_dialog"
 TAG_UV_PREVIEW = "mesh_import_uv_preview"
 
 
@@ -13,10 +13,10 @@ def build_mesh_import_tab(state: AppState) -> None:
     """Build the Mesh Import tab wireframe."""
 
     def on_browse_clicked() -> None:
-        dpg.show_item(TAG_FILE_DIALOG)
+        file_path = pick_mesh_file()
+        if not file_path:
+            return
 
-    def on_file_selected(sender, app_data) -> None:
-        file_path = app_data["file_path_name"]
         dpg.set_value(TAG_FILE_PATH, file_path)
         mesh_core.load_mesh(state, file_path)
 
@@ -59,17 +59,3 @@ def build_mesh_import_tab(state: AppState) -> None:
                         "UV layout preview will appear here",
                         color=(140, 140, 140),
                     )
-
-    with dpg.file_dialog(
-        tag=TAG_FILE_DIALOG,
-        directory_selector=False,
-        show=False,
-        callback=on_file_selected,
-        width=700,
-        height=400,
-        default_path=".",
-    ):
-        dpg.add_file_extension(
-            "Mesh files (*.obj, *.fbx){.obj,.fbx}",
-            color=(100, 200, 100),
-        )
